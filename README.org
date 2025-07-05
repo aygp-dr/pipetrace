@@ -53,10 +53,10 @@ This project extends the concepts presented in the [[https://github.com/aygp-dr/
 4. Or manual execution:
    #+begin_src bash
    # In one terminal
-   python src/example.py
+   make run
    
    # In another terminal
-   python src/read_fifo.py
+   make monitor
    #+end_src
 
 5. Watch the trace in real-time!
@@ -106,6 +106,29 @@ make tangle
 # Clean generated files
 make clean
 #+end_src
+
+** Tmux Dashboard Setup
+
+For a better debugging experience, you can use tmux to create a dashboard that shows both the running application and the trace monitor simultaneously:
+
+#+begin_src bash
+# Create a new tmux session named 'pipetrace'
+tmux new-session -s pipetrace -d
+
+# Split the window horizontally
+tmux split-window -h -t pipetrace
+
+# Run the monitor in the right pane
+tmux send-keys -t pipetrace:0.1 'make monitor' C-m
+
+# Run the example in the left pane
+tmux send-keys -t pipetrace:0.0 'make run' C-m
+
+# Attach to the tmux session
+tmux attach -t pipetrace
+#+end_src
+
+This creates a split-screen view with the application output on the left and the trace visualization on the right.
 
 ** Dependencies and Environment
 
