@@ -1,9 +1,9 @@
 # Pipetrace Makefile
 
-.PHONY: all clean run monitor test tangle help
+.PHONY: all clean run monitor test tangle help setup demo watch version install
 
 # Default target
-all: help
+all: fifo run
 
 # Help message
 help:
@@ -17,11 +17,18 @@ help:
 	@echo "  tangle   : Tangle org files with Emacs"
 	@echo "  clean    : Remove generated files"
 	@echo "  test     : Run tests"
+	@echo "  setup    : Set up development environment"
+	@echo "  demo     : Run a complete demo in tmux"
+	@echo "  watch    : Monitor for changes and rerun"
+	@echo "  version  : Show version information"
+	@echo "  install  : Install as a package"
+	@echo "  all      : Run fifo and example script"
 	@echo "  help     : Show this help message"
 	@echo ""
 	@echo "Usage examples:"
 	@echo "  make run      # Run the example script"
 	@echo "  make monitor  # In another terminal, monitor the FIFO"
+	@echo "  make demo     # Run a complete demo in tmux"
 
 # Run the example script
 run: fifo
@@ -47,3 +54,44 @@ clean:
 # Run tests (placeholder for future tests)
 test:
 	@echo "No tests implemented yet"
+
+# Setup development environment
+setup:
+	@echo "Setting up development environment..."
+	@uv init || echo "Project already initialized"
+	@uv venv
+	@echo "Environment ready! Activate with: source .venv/bin/activate"
+
+# Run a complete demo in tmux
+demo:
+	@echo "Starting pipetrace demo in tmux..."
+	tmux new-session -s pipetrace -d || (tmux kill-session -t pipetrace && tmux new-session -s pipetrace -d)
+	tmux split-window -h -t pipetrace
+	tmux send-keys -t pipetrace:0.1 'make monitor' C-m
+	tmux send-keys -t pipetrace:0.0 'sleep 1 && make run' C-m
+	tmux attach -t pipetrace
+
+# Watch for changes and rerun
+watch:
+	@echo "Watching for changes and rerunning..."
+	@while true; do \
+		make fifo; \
+		make run; \
+		sleep 5; \
+	done
+
+# Show version information
+version:
+	@echo "Pipetrace Version: 0.1.0"
+	@python --version
+	@uv --version
+	@uname -a
+
+# Install as a package
+install:
+	@echo "Installing pipetrace..."
+	@mkdir -p ~/.local/bin
+	@cp src/pipetrace.py ~/.local/bin/pipetrace
+	@chmod +x ~/.local/bin/pipetrace
+	@echo "Installed pipetrace to ~/.local/bin/pipetrace"
+	@echo "Make sure ~/.local/bin is in your PATH"
