@@ -1,6 +1,6 @@
 # Pipetrace Makefile
 
-.PHONY: all clean run monitor test tangle help setup demo watch version install
+.PHONY: all clean run monitor test tangle help setup demo watch version install README.md
 
 # Default target
 all: fifo run
@@ -56,11 +56,16 @@ test:
 	@echo "No tests implemented yet"
 
 # Setup development environment
-setup:
+setup: README.md
 	@echo "Setting up development environment..."
 	@uv init || echo "Project already initialized"
 	@uv venv
 	@echo "Environment ready! Activate with: source .venv/bin/activate"
+
+# Convert README.org to README.md for uv compatibility
+README.md: README.org
+	@echo "Converting README.org to markdown..."
+	@emacs --batch --eval "(progn (find-file \"README.org\") (require 'ox-md) (org-md-export-to-markdown) (kill-buffer))" 2>/dev/null || echo "# Pipetrace\n\nA lightweight Python tool for tracing program control flow using named pipes (FIFOs).\n\nSee README.org for full documentation." > README.md
 
 # Run a complete demo in tmux
 demo:

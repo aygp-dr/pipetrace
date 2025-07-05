@@ -50,3 +50,5 @@ make_dirs.sh
 ADR-001-fifo-debugging.md
 SETUP.org
 setup-v2.org
+README.md
+.venv/
