@@ -41,12 +41,25 @@ This project extends the concepts presented in the [[https://github.com/aygp-dr/
        pass
    #+end_src
 
-3. In another terminal, run the reader:
+3. Using the Makefile (recommended):
    #+begin_src bash
+   # In one terminal
+   make run
+   
+   # In another terminal
+   make monitor
+   #+end_src
+
+4. Or manual execution:
+   #+begin_src bash
+   # In one terminal
+   python src/example.py
+   
+   # In another terminal
    python src/read_fifo.py
    #+end_src
 
-4. Execute your program normally and watch the trace in real-time!
+5. Watch the trace in real-time!
 
 ** Architecture
 
@@ -66,7 +79,33 @@ See ~src/example.py~ for a complete working example.
 ** Requirements
 
 - Python 3.6+
-- Unix-like system (Linux, macOS) that supports named pipes
+- Unix-like system (Linux, macOS, FreeBSD) that supports named pipes
+- Make (optional, for using the Makefile)
+- Emacs (optional, for tangling org files)
+
+** Makefile Usage
+
+The project includes a Makefile with the following targets:
+
+#+begin_src bash
+# Show available commands
+make help
+
+# Run the example script
+make run
+
+# Run the FIFO monitor
+make monitor
+
+# Create the FIFO
+make fifo
+
+# Tangle org files with Emacs
+make tangle
+
+# Clean generated files
+make clean
+#+end_src
 
 ** Dependencies and Environment
 
