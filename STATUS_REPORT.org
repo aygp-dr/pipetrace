@@ -64,9 +64,32 @@ Press Ctrl+C to exit
 → ENTER: main from <module> (/home/jwalsh/projects/aygp-dr/pipetrace/src/example.py:49)
 → ENTER: process_data from main (/home/jwalsh/projects/aygp-dr/pipetrace/src/example.py:41)
 → ENTER: calculate_something from process_data (/home/jwalsh/projects/aygp-dr/pipetrace/src/example.py:26)
-← EXIT: calculate_something (elapsed: 0.3329s) - Success
-← EXIT: process_data (elapsed: 0.5053s) - Exception: ValueError: Random processing error occurred
-← EXIT: main (elapsed: 1.0107s) - Success
+← EXIT: calculate_something (elapsed: 0.4959s) - Success
+→ ENTER: calculate_something from process_data (/home/jwalsh/projects/aygp-dr/pipetrace/src/example.py:26)
+← EXIT: calculate_something (elapsed: 0.4689s) - Success
+← EXIT: process_data (elapsed: 2.0166s) - Exception: ValueError: Random processing error occurred
+← EXIT: main (elapsed: 3.0249s) - Success
+#+end_example
+
+*** Latest Test Results (July 5, 2025)
+
+#+begin_example
+# Output from running make run
+2025-07-05 03:35:11 [INFO] Starting example program
+2025-07-05 03:35:11 [INFO] ENTER: process_data from main (/home/jwalsh/projects/aygp-dr/pipetrace/src/example.py:41)
+2025-07-05 03:35:11 [INFO] Starting data processing
+2025-07-05 03:35:11 [INFO] Processing batch 1
+2025-07-05 03:35:11 [INFO] ENTER: calculate_something from process_data (/home/jwalsh/projects/aygp-dr/pipetrace/src/example.py:26)
+2025-07-05 03:35:12 [INFO] Calculating with inputs: a=0, b=1
+2025-07-05 03:35:12 [INFO] EXIT: calculate_something (elapsed: 0.4959s) - Success
+2025-07-05 03:35:12 [INFO] Processing batch 2
+2025-07-05 03:35:12 [INFO] ENTER: calculate_something from process_data (/home/jwalsh/projects/aygp-dr/pipetrace/src/example.py:26)
+2025-07-05 03:35:13 [INFO] Calculating with inputs: a=1, b=2
+2025-07-05 03:35:13 [INFO] EXIT: calculate_something (elapsed: 0.4689s) - Success
+2025-07-05 03:35:13 [ERROR] EXIT: process_data (elapsed: 2.0166s) - Exception: ValueError: Random processing error occurred
+2025-07-05 03:35:14 [ERROR] Main program caught error: Random processing error occurred
+2025-07-05 03:35:14 [INFO] Example program completed
+2025-07-05 03:35:14 [INFO] EXIT: main (elapsed: 3.0249s) - Success
 #+end_example
 
 * Validation Criteria
@@ -89,9 +112,12 @@ The FIFO communication follows a strictly defined contract as detailed in the [[
 Each event in the FIFO is transmitted as a single line of JSON text:
 
 #+begin_src json
-{"timestamp": "2025-07-05T03:05:52.123456", "type": "enter", "function": "main", "caller": {"function": "<module>", "filename": "/home/jwalsh/projects/aygp-dr/pipetrace/src/example.py", "lineno": 49}}
-{"timestamp": "2025-07-05T03:05:52.234567", "type": "exit", "function": "calculate_something", "elapsed": 0.3329}
-{"timestamp": "2025-07-05T03:05:52.345678", "type": "exception", "function": "process_data", "elapsed": 0.5053, "exception": {"type": "ValueError", "message": "Random processing error occurred"}}
+{"timestamp": "2025-07-05T03:35:09.123456", "type": "enter", "function": "main", "caller": {"function": "<module>", "filename": "/home/jwalsh/projects/aygp-dr/pipetrace/src/example.py", "lineno": 49}}
+{"timestamp": "2025-07-05T03:35:11.234567", "type": "enter", "function": "process_data", "caller": {"function": "main", "filename": "/home/jwalsh/projects/aygp-dr/pipetrace/src/example.py", "lineno": 41}}
+{"timestamp": "2025-07-05T03:35:11.345678", "type": "enter", "function": "calculate_something", "caller": {"function": "process_data", "filename": "/home/jwalsh/projects/aygp-dr/pipetrace/src/example.py", "lineno": 26}}
+{"timestamp": "2025-07-05T03:35:12.456789", "type": "exit", "function": "calculate_something", "elapsed": 0.4959}
+{"timestamp": "2025-07-05T03:35:13.567890", "type": "exception", "function": "process_data", "elapsed": 2.0166, "exception": {"type": "ValueError", "message": "Random processing error occurred"}}
+{"timestamp": "2025-07-05T03:35:14.678901", "type": "exit", "function": "main", "elapsed": 3.0249}
 #+end_src
 
 ** Contract Verification
