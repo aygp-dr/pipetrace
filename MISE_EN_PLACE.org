@@ -1,0 +1,130 @@
+#+TITLE: Pipetrace Mise en Place
+#+AUTHOR: jwalsh
+#+DATE: 2025-07-05
+
+* Pipetrace - Mise en Place
+
+This document provides a complete overview of the project's structure, setup, and workflow - everything in its place and a place for everything.
+
+** Project Structure
+
+| File/Directory | Purpose |
+|----------------|---------|
+| [[./README.org][README.org]] | Main project documentation |
+| [[./Makefile][Makefile]] | Workflow automation |
+| [[./FIFO_SCHEMA.org][FIFO_SCHEMA.org]] | Schema specification for FIFO data contract |
+| [[./STATUS_REPORT.org][STATUS_REPORT.org]] | Current project status and validation results |
+| [[./PROMPTS.org][PROMPTS.org]] | Development process documentation |
+| [[./src/pipetrace.py][src/pipetrace.py]] | Core tracing functionality |
+| [[./src/example.py][src/example.py]] | Example usage demonstration |
+| [[./src/read_fifo.py][src/read_fifo.py]] | FIFO reader and visualizer |
+
+** Development Workflow
+
+*** Setting Up Environment
+
+#+begin_src bash
+# Clone the repository
+git clone https://github.com/aygp-dr/pipetrace.git
+cd pipetrace
+
+# Initialize dependencies
+uv init
+uv venv
+#+end_src
+
+*** Daily Development
+
+#+begin_src bash
+# Show available commands
+make help
+
+# Create FIFO if needed
+make fifo
+
+# Run the example
+make run
+
+# Monitor the trace output
+make monitor
+
+# Clean up when done
+make clean
+#+end_src
+
+*** Tmux Dashboard
+
+For an optimal development experience, use the tmux dashboard:
+
+#+begin_src bash
+# Create tmux dashboard
+tmux new-session -s pipetrace -d
+tmux split-window -h -t pipetrace
+tmux send-keys -t pipetrace:0.1 'make monitor' C-m
+tmux send-keys -t pipetrace:0.0 'make run' C-m
+tmux attach -t pipetrace
+#+end_src
+
+** Data Flow
+
+1. Application decorated with ~@trace~ executes
+2. Trace events written to FIFO as JSON lines
+3. FIFO reader visualizes events in real-time
+
+#+begin_src ascii
++------------------+    JSON    +----------------+    read    +------------------+
+| src/example.py   | --------> | FIFO           | --------> | src/read_fifo.py |
+| with @trace      |            | /tmp/pipetrace |            |                  |
++------------------+            +----------------+            +------------------+
+#+end_src
+
+** JSONL Schema
+
+Each event in the FIFO follows this format:
+
+#+begin_src json
+{"timestamp": "2025-07-05T03:35:09.123456", "type": "enter", "function": "main", "caller": {"function": "<module>", "filename": "src/example.py", "lineno": 49}}
+#+end_src
+
+See [[./FIFO_SCHEMA.org][FIFO_SCHEMA.org]] for full schema definition.
+
+** Testing
+
+Run the example script and monitor to validate functionality:
+
+#+begin_src bash
+# In terminal 1
+make run
+
+# In terminal 2
+make monitor
+#+end_src
+
+Expected output in monitor:
+
+#+begin_example
+→ ENTER: main from <module> (src/example.py:49)
+→ ENTER: process_data from main (src/example.py:41)
+→ ENTER: calculate_something from process_data (src/example.py:26)
+← EXIT: calculate_something (elapsed: 0.4959s) - Success
+→ ENTER: calculate_something from process_data (src/example.py:26)
+← EXIT: calculate_something (elapsed: 0.4689s) - Success
+← EXIT: process_data (elapsed: 2.0166s) - Exception: ValueError: Random processing error occurred
+← EXIT: main (elapsed: 3.0249s) - Success
+#+end_example
+
+** Next Steps
+
+- [ ] Add support for custom FIFO paths
+- [ ] Enhance visualization with more detailed call trees
+- [ ] Create a web-based visualization interface
+- [ ] Add support for distributed tracing
+
+** Repository Status
+
+Current Git status:
+#+begin_example
+On branch main
+Your branch is up to date with 'origin/main'.
+nothing to commit, working tree clean
+#+end_example
