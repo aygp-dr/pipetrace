@@ -28,7 +28,7 @@ This project extends the concepts presented in the [[https://github.com/aygp-dr/
 
 ** Quick Start
 
-1. Import the tracer in your code:
+1. Import the tracer from [[./src/pipetrace.py][src/pipetrace.py]] in your code:
    #+begin_src python
    from pipetrace import trace
    #+end_src
@@ -50,7 +50,7 @@ This project extends the concepts presented in the [[https://github.com/aygp-dr/
    make monitor
    #+end_src
 
-4. Or manual execution:
+4. Or run the visualizer [[./src/read_fifo.py][read_fifo.py]] manually:
    #+begin_src bash
    # In one terminal
    make run
@@ -74,7 +74,7 @@ Pipetrace uses named pipes (FIFOs) to facilitate communication between your runn
 
 ** Example Usage
 
-See ~src/example.py~ for a complete working example.
+See [[./src/example.py][src/example.py]] for a complete working example.
 
 ** Requirements
 
@@ -85,7 +85,7 @@ See ~src/example.py~ for a complete working example.
 
 ** Makefile Usage
 
-The project includes a Makefile with the following targets:
+The project includes a [[./Makefile][Makefile]] with the following targets:
 
 #+begin_src bash
 # Show available commands
@@ -132,7 +132,7 @@ This creates a split-screen view with the application output on the left and the
 
 ** Dependencies and Environment
 
-We use ~uv~ for dependency management:
+We use [[https://github.com/astral-sh/uv][uv]] for dependency management:
 
 #+begin_src bash
 # Initialize the project
