@@ -1,0 +1,111 @@
+#+TITLE: Pipetrace Development Prompts
+#+AUTHOR: jwalsh
+#+DATE: 2025-07-04
+
+* Pipetrace Development Process
+
+This document records the process used to build and document the pipetrace project, including the prompts used and the steps taken.
+
+** Initial Project Setup
+
+The initial prompt for setting up the project:
+
+#+begin_quote
+git init; tangle setup.org with emacs then create a good README.org; gh repo create; add good desc; add good topics; create the debug fifo; execture code; read the fifo and use that to show the control flow just using logging
+#+end_quote
+
+** Project Structure Definition
+
+The process involved:
+
+1. Creating git repository:
+   #+begin_src bash
+   git init
+   #+end_src
+
+2. Creating org-mode files for project definition:
+   - ~setup.org~ - Main file with architecture decision record
+   - ~setup-v2.org~ - Alternative implementation approach
+
+3. Adding `:mkdirp yes` to org-mode tangle blocks to ensure directory creation:
+   #+begin_src emacs-lisp
+   :header-args: :tangle src/pipetrace.py :mkdirp yes
+   #+end_src
+
+4. Tangling files with Emacs:
+   #+begin_src bash
+   emacs --batch --eval "(progn (find-file \"setup.org\") (org-babel-tangle) (find-file \"setup-v2.org\") (org-babel-tangle))"
+   #+end_src
+
+5. Creating README.org with:
+   - Project overview and features
+   - Reference to Filesystem Communication Space research
+   - Quick start guide
+   - Architecture diagram
+   - Badges for language, version, license, status
+
+6. GitHub repository creation and configuration:
+   #+begin_src bash
+   gh repo create pipetrace --public
+   gh repo edit aygp-dr/pipetrace --description "A lightweight Python tool for tracing program control flow using named pipes (FIFOs)" --add-topic python,debugging,tracing,control-flow,fifo,named-pipes,monitoring
+   git remote add origin https://github.com/aygp-dr/pipetrace.git
+   #+end_src
+
+7. Creating an RFC GitHub issue:
+   #+begin_src bash
+   gh label create rfc --color FF6F00 --description "Request for Comments"
+   gh issue create --title "RFC: pipetrace Design Document" --body "..." --label rfc
+   #+end_src
+
+8. Creating the debug FIFO:
+   #+begin_src python
+   import os
+   os.mkfifo('/tmp/pipetrace_fifo') if not os.path.exists('/tmp/pipetrace_fifo') else print('FIFO already exists')
+   #+end_src
+
+9. Committing files with conventional commits:
+   #+begin_src bash
+   git add README.org
+   git commit -m "docs(readme): initial project documentation"
+   
+   git add src/pipetrace.py
+   git commit -m "feat(core): implement pipetrace core functionality"
+   
+   git add src/example.py
+   git commit -m "docs(example): add example usage script"
+   
+   git add src/read_fifo.py
+   git commit -m "feat(monitor): add FIFO reader for visualizing control flow"
+   
+   git add setup.org
+   git commit -m "docs(org): add main org-mode setup file"
+   #+end_src
+
+** Implementation Details
+
+The implementation provides three main components:
+
+1. Core tracing module (`src/pipetrace.py`):
+   - Function decorator for tracing
+   - FIFO creation and management
+   - Structured event output
+
+2. Example usage (`src/example.py`):
+   - Demonstration of traced functions
+   - Error handling examples
+   - Recursive function tracing
+
+3. FIFO reader (`src/read_fifo.py`):
+   - Real-time visualization
+   - Color-coded output
+   - Call stack management
+
+** Next Steps
+
+The following tasks are planned:
+
+1. Create a formal schema specification for the FIFO data contract
+2. Execute the code and demonstrate the control flow tracing
+3. Add more comprehensive documentation
+4. Implement additional visualizations
+5. Consider web-based or graphical output formats
