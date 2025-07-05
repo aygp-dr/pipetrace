@@ -1,0 +1,9 @@
+"""
+Pipetrace - A lightweight Python tool for tracing program control flow using named pipes (FIFOs).
+"""
+
+__version__ = "0.1.0"
+
+from .pipetrace import trace, PipeTracer
+
+__all__ = ["trace", "PipeTracer"]
