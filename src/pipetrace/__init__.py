@@ -4,6 +4,6 @@ Pipetrace - A lightweight Python tool for tracing program control flow using nam
 
 __version__ = "0.1.0"
 
-from .pipetrace import trace, PipeTracer
+from .pipetrace import trace, logger
 
-__all__ = ["trace", "PipeTracer"]
+__all__ = ["trace", "logger"]
