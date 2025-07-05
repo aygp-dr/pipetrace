@@ -1,0 +1,380 @@
+#+TITLE: Pipetrace Setup
+#+AUTHOR: jwalsh
+#+DATE: 2025-07-04
+
+* Introduction
+
+This file contains the setup for the pipetrace tool, which uses FIFOs to trace program control flow through logging.
+
+* Architecture Decision Record (ADR)
+
+** Context
+When debugging complex applications, understanding the control flow can be challenging. Traditional logging may not provide clear visualization of function entry/exit and nested calls.
+
+** Decision
+Create a lightweight tracing tool that:
+1. Uses named pipes (FIFOs) for inter-process communication
+2. Decorates functions to track entry and exit points
+3. Captures timing information and exceptions
+4. Provides real-time visualization of control flow
+
+** Consequences
+- Pros:
+  - Non-invasive: minimal changes to existing code (just add decorators)
+  - Real-time monitoring possible in separate terminal
+  - No dependency on external tracing tools
+  - Works across threads and processes
+- Cons:
+  - Limited to Python code
+  - Requires manual decoration of functions
+  - Some performance overhead
+  - Only shows control flow, not detailed state
+
+* Implementation
+
+** Core Module
+:PROPERTIES:
+:header-args: :tangle src/pipetrace.py :mkdirp yes
+:END:
+
+#+begin_src python
+#!/usr/bin/env python3
+"""
+Pipetrace - A simple control flow tracing tool using FIFOs for debugging.
+"""
+
+import os
+import sys
+import time
+import logging
+import inspect
+import atexit
+import json
+from functools import wraps
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger('pipetrace')
+
+# FIFO configuration
+FIFO_PATH = '/tmp/pipetrace_fifo'
+
+class PipeTracer:
+    """Main tracer class that manages the FIFO and tracing logic."""
+    
+    def __init__(self, fifo_path=FIFO_PATH):
+        """Initialize the tracer with a FIFO path."""
+        self.fifo_path = fifo_path
+        self.create_fifo()
+        atexit.register(self.cleanup)
+    
+    def create_fifo(self):
+        """Create the debug FIFO if it doesn't exist."""
+        if not os.path.exists(self.fifo_path):
+            try:
+                os.mkfifo(self.fifo_path)
+                logger.info(f"Created FIFO at {self.fifo_path}")
+            except OSError as e:
+                logger.error(f"Failed to create FIFO: {e}")
+                sys.exit(1)
+    
+    def cleanup(self):
+        """Clean up resources on exit."""
+        if os.path.exists(self.fifo_path):
+            try:
+                os.unlink(self.fifo_path)
+                logger.info(f"Removed FIFO at {self.fifo_path}")
+            except OSError as e:
+                logger.error(f"Failed to remove FIFO: {e}")
+    
+    def write_to_fifo(self, event_type, func_name, caller_info=None, elapsed=None, exception=None):
+        """Write a structured event to the FIFO."""
+        event = {
+            "timestamp": datetime.now().isoformat(),
+            "type": event_type,
+            "function": func_name
+        }
+        
+        if caller_info:
+            event["caller"] = {
+                "function": caller_info.function,
+                "filename": caller_info.filename,
+                "lineno": caller_info.lineno
+            }
+        
+        if elapsed is not None:
+            event["elapsed"] = round(elapsed, 4)
+            
+        if exception:
+            event["exception"] = {
+                "type": type(exception).__name__,
+                "message": str(exception)
+            }
+        
+        try:
+            with open(self.fifo_path, 'w') as fifo:
+                fifo.write(json.dumps(event) + "\n")
+                fifo.flush()
+        except IOError as e:
+            logger.error(f"Failed to write to FIFO: {e}")
+    
+    def trace(self, func):
+        """Decorator to trace function entry and exit."""
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            frame = inspect.currentframe()
+            caller_frame = frame.f_back
+            caller_info = inspect.getframeinfo(caller_frame)
+            
+            # Entry message
+            self.write_to_fifo("enter", func.__name__, caller_info)
+            entry_msg = f"ENTER: {func.__name__} from {caller_info.function} ({caller_info.filename}:{caller_info.lineno})"
+            logger.info(entry_msg)
+            
+            # Call the function
+            start_time = time.time()
+            try:
+                result = func(*args, **kwargs)
+                # Exit message (success)
+                elapsed = time.time() - start_time
+                self.write_to_fifo("exit", func.__name__, elapsed=elapsed)
+                exit_msg = f"EXIT: {func.__name__} (elapsed: {elapsed:.4f}s) - Success"
+                logger.info(exit_msg)
+                return result
+            except Exception as e:
+                # Exit message (exception)
+                elapsed = time.time() - start_time
+                self.write_to_fifo("exception", func.__name__, elapsed=elapsed, exception=e)
+                exit_msg = f"EXIT: {func.__name__} (elapsed: {elapsed:.4f}s) - Exception: {type(e).__name__}: {str(e)}"
+                logger.error(exit_msg)
+                raise
+        
+        return wrapper
+
+# Create a global instance for easy import
+tracer = PipeTracer()
+trace = tracer.trace
+
+if __name__ == "__main__":
+    logger.info("Pipetrace module is ready.")
+    logger.info(f"Use 'cat {FIFO_PATH}' in another terminal to view traces.")
+#+end_src
+
+** Example Script
+:PROPERTIES:
+:header-args: :tangle src/example.py :mkdirp yes
+:END:
+
+#+begin_src python
+#!/usr/bin/env python3
+"""
+Example script demonstrating the use of pipetrace.
+"""
+
+import time
+import random
+import logging
+from pipetrace import trace
+
+# Get the logger
+logger = logging.getLogger('pipetrace')
+
+@trace
+def calculate_something(a, b):
+    """Simulate a calculation with some delay."""
+    logger.info(f"Calculating with inputs: a={a}, b={b}")
+    time.sleep(random.uniform(0.1, 0.5))
+    return a * b + random.randint(1, 10)
+
+@trace
+def process_data():
+    """Process some simulated data with potential errors."""
+    logger.info("Starting data processing")
+    
+    # Simulate some processing steps
+    total = 0
+    for i in range(5):
+        logger.info(f"Processing batch {i+1}")
+        value = calculate_something(i, i+1)
+        total += value
+        
+        # Randomly fail sometimes
+        if random.random() < 0.2:
+            raise ValueError("Random processing error occurred")
+    
+    return total
+
+@trace
+def recursive_function(n):
+    """A recursive function to demonstrate nested calls."""
+    if n <= 0:
+        return 1
+    time.sleep(0.1)  # Small delay
+    return n * recursive_function(n-1)
+
+@trace
+def main():
+    """Main function."""
+    logger.info("Starting example program")
+    
+    try:
+        # Try the regular process
+        result = process_data()
+        logger.info(f"Processing completed with result: {result}")
+        
+        # Try the recursive function
+        factorial = recursive_function(4)
+        logger.info(f"Factorial result: {factorial}")
+    except Exception as e:
+        logger.error(f"Main program caught error: {e}")
+    
+    logger.info("Example program completed")
+
+if __name__ == "__main__":
+    main()
+#+end_src
+
+** FIFO Reader Utility
+:PROPERTIES:
+:header-args: :tangle src/read_fifo.py :mkdirp yes
+:END:
+
+#+begin_src python
+#!/usr/bin/env python3
+"""
+Utility to read from the pipetrace FIFO and display the control flow.
+"""
+
+import os
+import sys
+import time
+import json
+import signal
+import threading
+from datetime import datetime
+
+# FIFO configuration
+FIFO_PATH = '/tmp/pipetrace_fifo'
+
+# ANSI colors for terminal output
+COLORS = {
+    "blue": "\033[94m",
+    "green": "\033[92m",
+    "red": "\033[91m",
+    "yellow": "\033[93m",
+    "reset": "\033[0m",
+    "bold": "\033[1m"
+}
+
+# Track function call depth for indentation
+call_stack = []
+current_depth = 0
+
+def handle_signal(sig, frame):
+    """Handle interrupt signal."""
+    print("\nExiting FIFO reader...")
+    sys.exit(0)
+
+def format_event(event):
+    """Format an event for display."""
+    global current_depth, call_stack
+    
+    event_type = event.get("type")
+    func_name = event.get("function", "unknown")
+    
+    # Update call stack and depth
+    if event_type == "enter":
+        call_stack.append(func_name)
+        indent = "  " * current_depth
+        current_depth += 1
+        
+        # Format entry message
+        caller = event.get("caller", {})
+        caller_func = caller.get("function", "unknown")
+        caller_file = caller.get("filename", "unknown")
+        caller_line = caller.get("lineno", "?")
+        
+        return f"{indent}{COLORS['blue']}→ ENTER: {COLORS['bold']}{func_name}{COLORS['reset']}{COLORS['blue']} from {caller_func} ({caller_file}:{caller_line}){COLORS['reset']}"
+    
+    elif event_type in ["exit", "exception"]:
+        if call_stack and call_stack[-1] == func_name:
+            call_stack.pop()
+        current_depth = max(0, current_depth - 1)
+        indent = "  " * current_depth
+        
+        # Format exit message
+        elapsed = event.get("elapsed", 0)
+        
+        if event_type == "exception":
+            exception = event.get("exception", {})
+            exc_type = exception.get("type", "Error")
+            exc_msg = exception.get("message", "Unknown error")
+            return f"{indent}{COLORS['red']}← EXIT: {COLORS['bold']}{func_name}{COLORS['reset']}{COLORS['red']} (elapsed: {elapsed}s) - Exception: {exc_type}: {exc_msg}{COLORS['reset']}"
+        else:
+            return f"{indent}{COLORS['green']}← EXIT: {COLORS['bold']}{func_name}{COLORS['reset']}{COLORS['green']} (elapsed: {elapsed}s) - Success{COLORS['reset']}"
+    
+    else:
+        # Unknown event type
+        indent = "  " * current_depth
+        return f"{indent}  {json.dumps(event)}"
+
+def main():
+    """Main function to read from the FIFO."""
+    global current_depth, call_stack
+    
+    if not os.path.exists(FIFO_PATH):
+        print(f"Error: FIFO {FIFO_PATH} does not exist.")
+        print("Make sure pipetrace is running first.")
+        sys.exit(1)
+    
+    print(f"Reading from FIFO: {FIFO_PATH}")
+    print("Press Ctrl+C to exit")
+    print(f"{COLORS['yellow']}Function call trace will be displayed here...{COLORS['reset']}")
+    print("-" * 80)
+    
+    # Reset state
+    current_depth = 0
+    call_stack = []
+    
+    # Set up signal handler
+    signal.signal(signal.SIGINT, handle_signal)
+    
+    try:
+        while True:
+            # Open FIFO for reading
+            try:
+                with open(FIFO_PATH, 'r') as fifo:
+                    for line in fifo:
+                        line = line.strip()
+                        try:
+                            event = json.loads(line)
+                            formatted = format_event(event)
+                            print(formatted)
+                        except json.JSONDecodeError:
+                            print(f"  Invalid JSON: {line}")
+            except IOError:
+                # FIFO might be temporarily unavailable
+                pass
+            
+            # If FIFO is closed, wait and retry
+            time.sleep(0.5)
+    except Exception as e:
+        print(f"Error reading from FIFO: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
+#+end_src
+
+* Directory Structure
+
+#+begin_src shell :tangle make_dirs.sh :tangle-mode (identity #o755) :mkdirp yes
+#!/bin/bash
+# Create directory structure
+mkdir -p src
+#+end_src
