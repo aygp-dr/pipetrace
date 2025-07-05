@@ -1,0 +1,92 @@
+#+TITLE: Pipetrace
+#+AUTHOR: jwalsh
+#+DATE: 2025-07-04
+
+* Pipetrace - Tracing Control Flow via FIFOs
+
+[[https://img.shields.io/badge/Language-Python-blue.svg]]
+[[https://img.shields.io/badge/Python-3.6%2B-blue.svg]]
+[[https://img.shields.io/badge/License-MIT-green.svg]]
+[[https://img.shields.io/badge/Status-Draft-red.svg]]
+
+** Overview
+
+Pipetrace is a lightweight Python tool for tracing program control flow using named pipes (FIFOs). It provides real-time visualization of function calls, timing information, and exception handling without requiring heavy instrumentation of your code.
+
+This project extends the concepts presented in the [[https://github.com/aygp-dr/filesystem-communication-space/blob/main/filesystem-communication-space.pdf][Filesystem Communication Space]] research paper, utilizing filesystem primitives (specifically named pipes) for inter-process communication and debugging purposes.
+
+** Features
+
+- Simple function decorator approach (~@trace~)
+- Real-time monitoring of control flow in a separate terminal
+- Captures timing information for performance analysis
+- Tracks function entry and exit points
+- Records exceptions with type and message
+- Works across threads and processes
+- Proper nesting/indentation of function calls in visualization
+- JSON-structured events for potential further processing
+
+** Quick Start
+
+1. Import the tracer in your code:
+   #+begin_src python
+   from pipetrace import trace
+   #+end_src
+
+2. Decorate functions you want to trace:
+   #+begin_src python
+   @trace
+   def my_function():
+       # Your code here
+       pass
+   #+end_src
+
+3. In another terminal, run the reader:
+   #+begin_src bash
+   python src/read_fifo.py
+   #+end_src
+
+4. Execute your program normally and watch the trace in real-time!
+
+** Architecture
+
+Pipetrace uses named pipes (FIFOs) to facilitate communication between your running program and a separate monitoring process. When a traced function is called, entry and exit events are written to the FIFO, which can be read by another process.
+
+#+begin_src ascii
++------------------+    write    +----------------+    read    +------------------+
+| Your Application | ---------> | Named Pipe     | ---------> | Trace Visualizer |
+| with @trace      |            | (FIFO)         |            |                  |
++------------------+            +----------------+            +------------------+
+#+end_src
+
+** Example Usage
+
+See ~src/example.py~ for a complete working example.
+
+** Requirements
+
+- Python 3.6+
+- Unix-like system (Linux, macOS) that supports named pipes
+
+** Dependencies and Environment
+
+We use ~uv~ for dependency management:
+
+#+begin_src bash
+# Initialize the project
+uv init
+
+# Create virtual environment
+uv venv
+
+# Install dependencies
+uv pip install -r requirements.txt
+#+end_src
+
+** License
+
+MIT
+
+** Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
