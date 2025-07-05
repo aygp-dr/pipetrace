@@ -4,10 +4,10 @@
 
 * Pipetrace - Tracing Control Flow via FIFOs
 
-[[https://img.shields.io/badge/Language-Python-blue.svg]]
 [[https://img.shields.io/badge/Python-3.6%2B-blue.svg]]
 [[https://img.shields.io/badge/License-MIT-green.svg]]
 [[https://img.shields.io/badge/Status-Draft-red.svg]]
+[[https://img.shields.io/badge/FIFO-IPC-orange.svg]]
 
 ** Overview
 
